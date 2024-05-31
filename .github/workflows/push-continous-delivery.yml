@@ -7,8 +7,8 @@ on:
 name: Continuous Delivery 
 jobs:
 
-  buildDocker32:
-    name: Build Docker Images (32bit)
+  buildDockerARM:
+    name: Build Docker Images (ARM)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
@@ -22,23 +22,21 @@ jobs:
         key: ${{ runner.os }}-docker-buildx-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-docker-buildx-
-    - name: Build x86/ARMv7 images
+    - name: Build ARM v6/v7 images
       run: |
         docker buildx build \
-          --platform linux/386,linux/arm/v7 \
+          --platform linux/arm/v6,linux/arm/v7 \
           --output "type=image,push=false" \
           --tag difegue/lanraragi:nightly \
           --cache-from "type=local,src=/tmp/buildxcache" \
           --cache-to "type=local,dest=/tmp/buildxcache" \
           --file ./tools/build/docker/Dockerfile .
 
-  buildDocker64:
-    name: Build Docker Images (64bit)
+  buildDockerx86:
+    name: Build Docker Images (x86)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - uses: actions/cache@v3
@@ -47,10 +45,10 @@ jobs:
         key: ${{ runner.os }}-docker-buildx-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-docker-buildx-
-    - name: Build x64/ARM64 images
+    - name: Build x86 images
       run: |
         docker buildx build \
-          --platform linux/amd64,linux/arm64 \
+          --platform linux/amd64,linux/386 \
           --output "type=image,push=false" \
           --tag difegue/lanraragi:nightly \
           --cache-from "type=local,src=/tmp/buildxcache" \
@@ -59,7 +57,7 @@ jobs:
 
   buildNightlyDocker:
     name: Bundle and Push Docker Image
-    needs: [buildDocker32, buildDocker64]
+    needs: [buildDockerARM, buildDockerx86]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
@@ -82,7 +80,7 @@ jobs:
     - name: Build/Push Nightly Docker
       run: |
         docker buildx build \
-          --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64 \
+          --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7 \
           --output "type=image,push=true" \
           --tag difegue/lanraragi:nightly \
           --cache-from "type=local,src=/tmp/buildxcache" \
